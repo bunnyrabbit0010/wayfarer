@@ -9,23 +9,13 @@ from src.agent.tools import tools, tool_mapping
 
 dotenv.load_dotenv()
 
-def run_agent_loop(prompt: str) -> str:
+def run_agent_loop(input_items: list) -> tuple[str, list]:
     """
     Main loop for the agent that interacts with the OpenAI API.
     It sends user prompts, handles function calls, and processes responses.
     """
     logger.info("Starting the agent loop...")
     client  = openai.OpenAI()
-
-
-    input_items = [
-        {
-            "role": "user",
-            "content": f"""
-                {prompt}
-                """
-        }
-    ]
 
     logger.info("Calling OpenAI API to get an interesting fact...")
 
@@ -44,7 +34,7 @@ def run_agent_loop(prompt: str) -> str:
 
         for item in openai_response.output:
             if item.type == "message":
-                return item.content[0].text
+                return item.content[0].text, input_items
             elif item.type == "function_call":
                 fn_name = item.name
                 fn_args = json.loads(item.arguments)
