@@ -16,7 +16,7 @@ def run_conversation(prompt: str):
     """
     logger.info("Loading System Prompt...")
 
-    prompt_path = Path("src/prompts/system_prompt.txt")
+    prompt_path = Path("src/prompts/system_prompt.md")
     system_prompt = prompt_path.read_text(encoding="utf-8")
 
     input_items = [

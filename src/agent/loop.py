@@ -14,10 +14,10 @@ def run_agent_loop(input_items: list) -> tuple[str, list]:
     Main loop for the agent that interacts with the OpenAI API.
     It sends user prompts, handles function calls, and processes responses.
     """
-    logger.info("Starting the agent loop...")
+    logger.debug("Starting the agent loop...")
     client  = openai.OpenAI()
 
-    logger.info("Calling OpenAI API to get an interesting fact...")
+    logger.debug("Calling OpenAI API to get an interesting fact...")
 
     while True:
         openai_response = client.responses.create(

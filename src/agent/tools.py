@@ -4,6 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 tools = [
+    {"type": "web_search"},
     {
         "type": "function",
         "name": "get_country_info",
