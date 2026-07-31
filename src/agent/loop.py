@@ -3,11 +3,9 @@ logger = logging.getLogger(__name__)
 
 import openai
 import json
-import dotenv
 from src.agent.tools import tools, tool_mapping
 
 
-dotenv.load_dotenv()
 
 def run_agent_loop(input_items: list) -> tuple[str, list]:
     """
@@ -17,7 +15,7 @@ def run_agent_loop(input_items: list) -> tuple[str, list]:
     logger.debug("Starting the agent loop...")
     client  = openai.OpenAI()
 
-    logger.debug("Calling OpenAI API to get an interesting fact...")
+    logger.debug("Calling OpenAI API ...")
 
     while True:
         openai_response = client.responses.create(
@@ -48,6 +46,8 @@ def run_agent_loop(input_items: list) -> tuple[str, list]:
                     "output": json.dumps(fn_response)
                 })
                 continue
+            elif item.type == "web_search_call":
+                logger.debug(f"Web search call detected: {item.model_dump(exclude_none=True)}")
             else:
                 logger.warning(f"Unexpected output type: {item.type}")
         

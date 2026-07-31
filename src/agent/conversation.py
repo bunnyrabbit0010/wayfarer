@@ -26,7 +26,7 @@ def run_conversation(prompt: str):
 
     while True:
         message, updated_input_items = run_agent_loop(input_items)
-        logger.info(f"Agent response: {message}")
+        print(f"Agent response: {message}")
 
         next_prompt = input("What's your next message? (or type 'exit' to quit): ")
         if next_prompt.lower() == 'exit':
