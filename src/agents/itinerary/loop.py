@@ -3,7 +3,7 @@ logger = logging.getLogger(__name__)
 
 import openai
 import json
-from src.agent.tools import tools, tool_mapping
+from src.agents.itinerary.tools import tools, tool_mapping
 
 
 
