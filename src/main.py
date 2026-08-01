@@ -7,7 +7,7 @@ logger.info("Starting the application...")
 
 dotenv.load_dotenv()
 
-prompt = f"Plan a 3 day trip to Yosemite, CA"
+prompt = f"Plan a 3 day trip to Los Angeles, CA"
 run_conversation(prompt)
 
 logger.info("Application finished.")

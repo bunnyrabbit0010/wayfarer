@@ -1,3 +1,6 @@
+import os
+from urllib import response
+
 import requests
 import logging
 
@@ -22,8 +25,94 @@ tools = [
             "additionalProperties": False
         },
     },
+    {
+        "type": "function",
+        "name": "get_places",
+        "description": "Get information about hotels/restaurants in a vicinity.",
+        "strict": True,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "near": {
+                    "type": "string",
+                    "description": "The location to search near (e.g., 'Yosemite Valley, CA').",
+                },
+                "category": {
+                    "type": "string",  
+                    "description": "The category of places to filter by (e.g., 'restaurants', 'hotels').",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "The search query use for additional context such as 'pet friendly' or 'vegan' to further enrich the category or any free text to send to places API.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "The maximum number of results to return. Defaults to 5.",
+                },
+            },
+            "required": ["near", "query", "category", "limit"],
+            "additionalProperties": False
+        },
+    },
 ]
 
+
+def get_places(near: str, query: str = None, category: str = None, limit: int = 5) -> dict:
+    """
+    Fetches places from the Foursquare Places API based on the provided parameters.
+
+    Args:
+        near (str): The location to search near (e.g., "Yosemite Valley, CA").
+        query (str): The search query (e.g., "restaurants").
+        category (str, optional): The category of places to filter by. Defaults to None.
+        limit (int, optional): The maximum number of results to return. Defaults to 5.
+
+    Returns:
+        dict: A dictionary containing the places data returned by the Foursquare API.
+    """
+    logger.debug(f"Fetching places near: {near}, query: {query}, category: {category}, limit: {limit}")
+    try:
+        fs_query = f"{query} {category}" if category else query
+        headers = {
+            "accept": "application/json",
+            "X-Places-Api-Version": "2025-06-17",
+            "authorization": f"Bearer {os.getenv('FOURSQUARE_API_KEY')}"
+        }
+        params = {
+            "near": near,
+            "query": fs_query,
+            "limit": limit
+        }
+        fs_response = requests.get(
+            "https://places-api.foursquare.com/places/search",
+            headers=headers,
+            params=params
+        )
+        if fs_response.status_code == 200:
+            places_data = fs_response.json()
+            return {
+                "places": [
+                    {
+                        "name": place.get("name"),
+                        "category": (
+                            place.get("categories", [{}])[0].get("name")
+                            if place.get("categories")
+                            else None
+                        ),
+                        "distance": place.get("distance"),
+                        "address": place.get("location", {}).get("formatted_address"),
+                    }
+                    for place in places_data.get("results", [])
+                ]
+            }
+        else:
+            logger.error(f"Foursquare API call failed: {fs_response.status_code} - {fs_response.text}")
+
+    except requests.RequestException as e:
+        logger.error(f"Error fetching places from Foursquare API: {e}")
+
+    logger.warning(f"No places found for near: {near}, query: {query}, category: {category}")
+    return {}  # Return an empty dictionary if no data is found
 
 def get_country_info(country : str) -> dict:
     """
@@ -64,4 +153,5 @@ def get_country_info(country : str) -> dict:
 
 tool_mapping = {
     "get_country_info": get_country_info,
+    "get_places": get_places,
 }

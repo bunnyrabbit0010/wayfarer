@@ -19,7 +19,7 @@ def run_agent_loop(input_items: list) -> tuple[str, list]:
 
     while True:
         openai_response = client.responses.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             input=input_items,
             tools=tools,
         )
