@@ -1,13 +1,21 @@
+from __future__ import annotations
+from enum import Enum
 import logging
-logger = logging.getLogger(__name__)
-
 import openai
 import json
 from src.agents.itinerary.tools import tools, tool_mapping
+from src.models.itinerary import Itinerary
 
 
+logger = logging.getLogger(__name__)
 
-def run_agent_loop(input_items: list) -> tuple[str, list]:
+
+class AgentResultType(str, Enum):
+    MESSAGE = "message"
+    ITINERARY = "itinerary"
+
+def run_agent_loop(input_items: list) -> tuple[AgentResultType, str | Itinerary, list]:
+
     """
     Main loop for the agent that interacts with the OpenAI API.
     It sends user prompts, handles function calls, and processes responses.
@@ -32,13 +40,16 @@ def run_agent_loop(input_items: list) -> tuple[str, list]:
 
         for item in openai_response.output:
             if item.type == "message":
-                return item.content[0].text, input_items
+                return AgentResultType.MESSAGE, item.content[0].text, input_items
             elif item.type == "function_call":
                 fn_name = item.name
                 fn_args = json.loads(item.arguments)
                 logger.info(f"Function call detected: {fn_name} with arguments: {fn_args}")
                 fn_response = tool_mapping.get(fn_name)(**fn_args)
                 logger.info(f"Function response: {fn_response}")
+
+                if fn_name == "submit_itinerary":
+                    return AgentResultType.ITINERARY, fn_response, input_items
 
                 input_items.append({
                     "type": "function_call_output",

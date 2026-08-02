@@ -16,6 +16,6 @@ def run_itinerary_agent(input_items: list, user_message: str) -> tuple[str, list
     input_items.append({"role": "user", "content": user_message})
 
     # Run the agent loop with the updated conversation history
-    message, updated_input_items = run_agent_loop(input_items)
+    result_type, payload, updated_input_items = run_agent_loop(input_items)
 
-    return message, updated_input_items
+    return result_type, payload, updated_input_items

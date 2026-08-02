@@ -3,8 +3,20 @@ from urllib import response
 
 import requests
 import logging
+import openai
+
+from src.models.itinerary import Itinerary
 
 logger = logging.getLogger(__name__)
+
+_submit_itinerary_tool = {
+    "type": "function",
+    **openai.pydantic_function_tool(
+        Itinerary,
+        name="submit_itinerary",
+        description="Submit the finalized, complete itinerary once the user has confirmed it.",
+    )["function"],
+}
 
 tools = [
     {"type": "web_search"},
@@ -54,6 +66,7 @@ tools = [
             "additionalProperties": False
         },
     },
+    _submit_itinerary_tool,
 ]
 
 
@@ -151,7 +164,11 @@ def get_country_info(country : str) -> dict:
     return {}  # Return an empty dictionary if no data is found
 
 
+def submit_itinerary(**itinerary_data) -> Itinerary:
+    return Itinerary.model_validate(itinerary_data)
+
 tool_mapping = {
     "get_country_info": get_country_info,
     "get_places": get_places,
+    "submit_itinerary": submit_itinerary
 }

@@ -1,9 +1,14 @@
+from __future__ import annotations
+from src.models.itinerary import Itinerary
+
 
 class SessionState:
     input_items: list   # conversation history sent to/from the LLM
+    itinerary: Itinerary | None  # the itinerary object, if generated
 
     def __init__(self):
         self.input_items = []   
+        self.itinerary = None
 
 _session_store = {}
 
