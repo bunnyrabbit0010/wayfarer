@@ -44,9 +44,9 @@ def run_agent_loop(input_items: list) -> tuple[AgentResultType, str | Itinerary,
             elif item.type == "function_call":
                 fn_name = item.name
                 fn_args = json.loads(item.arguments)
-                logger.info(f"Function call detected: {fn_name} with arguments: {fn_args}")
+                logger.debug(f"Function call detected: {fn_name} with arguments: {fn_args}")
                 fn_response = tool_mapping.get(fn_name)(**fn_args)
-                logger.info(f"Function response: {fn_response}")
+                logger.debug(f"Function response: {fn_response}")
 
                 if fn_name == "submit_itinerary":
                     return AgentResultType.ITINERARY, fn_response, input_items
