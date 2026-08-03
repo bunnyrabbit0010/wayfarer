@@ -7,7 +7,7 @@ logger.info("Starting the application...")
 
 dotenv.load_dotenv()
 
-prompt = f"Plan a 3 day trip to Los Angeles, CA"
+prompt = f"Plan a 10 day trip to Italy. Must include Rome. Optionally include Venice/Florence/Lake Cuomo/Cinque Terre. Trip is between November 18th and the 29th. "
 run_conversation("dev-session", prompt)
 
 logger.info("Application finished.")
