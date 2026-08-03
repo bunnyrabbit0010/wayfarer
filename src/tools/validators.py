@@ -6,8 +6,12 @@ from src.models.itinerary import Itinerary, Stop
 from math import radians, sin, cos, sqrt, atan2
 
 #TODO - fix this hardcode to something configurable or inputtable...
-MAX_STOP_DISTANCE_MILES = 50.0  # Maximum distance between stops 
-MAX_DAY_DISTANCE_MILES = 500.0  # Maximum distance between days
+# Straight-line distance can't distinguish well-connected rail corridors from poorly-connected
+# detours (e.g. Rome-Florence at 143mi is a direct high-speed train; Venice-Como at 158mi is not,
+# despite being a similar distance). 150mi is a best-fit line between real examples we've seen,
+# not a guarantee. Real fix is a routing/transit API, per context.md's compute_itinerary_geometry design.
+MAX_STOP_DISTANCE_MILES = 50.0  # Maximum distance between stops
+MAX_DAY_DISTANCE_MILES = 150.0  # Maximum distance between days
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +47,8 @@ def get_lat_long(poi: str, destination: str) -> tuple[float, float] | None:
             places_data = fs_response.json()
             top_place = places_data.get("results", [])[0] if places_data.get("results") else None
             if top_place:
-                latitude = top_place.get("geocodes", {}).get("main", {}).get("latitude")
-                longitude = top_place.get("geocodes", {}).get("main", {}).get("longitude")
+                latitude = top_place.get("latitude")
+                longitude = top_place.get("longitude")
                 if latitude is not None and longitude is not None:
                     logger.debug(f"Found lat-long for POI '{poi}': ({latitude}, {longitude})")
                     return latitude, longitude
@@ -75,6 +79,19 @@ def compute_distance_between(stop1: Stop, stop2: Stop) -> float:
         return R * 2 * atan2(sqrt(a), sqrt(1 - a))
     
     return -1.0  # Return -1.0 if any of the coordinates are invalid
+
+def _find_nearest_resolved_stop(day_stops: list[Stop], resolved_indices: set[int], jj: int) -> Stop | None:
+    """Search outward from index jj (both directions) for the closest stop whose
+    coordinates were resolved in Pass 1 (per resolved_indices), not inherited."""
+    offset = 1
+    while jj - offset >= 0 or jj + offset < len(day_stops):
+        if jj - offset >= 0 and (jj - offset) in resolved_indices:
+            return day_stops[jj - offset]
+        if jj + offset < len(day_stops) and (jj + offset) in resolved_indices:
+            return day_stops[jj + offset]
+        offset += 1
+    return None  # nothing resolved anywhere in this day
+
  
 def check_itinerary_feasibility(itinerary: Itinerary) -> list[str] :
     """
@@ -89,19 +106,37 @@ def check_itinerary_feasibility(itinerary: Itinerary) -> list[str] :
     errors = []
     logger.info("Checking Itinerary Feasibility...")
     # Populating lat long for all days/stops in the itinerary.
+    
+    # Pass 1 — geocode every stop, unchanged from what you have.
     for day in itinerary.days:
-        logger.debug("Validating itinerary for day: %d", day.day_number)
         for stop in day.stops:
-            logging.debug("Validating stop: %s", stop.name)
-            result = get_lat_long(stop.name, itinerary.destination)
-            if result is None:
+            result = get_lat_long(stop.name, stop.address)
+            stop.lat, stop.lng = result if result else (None, None)
+
+
+    #Pass 2 to inherit the lat long from nearest neighbor if not found in pass 1
+    for day in itinerary.days:
+        # Snapshot must be taken before any inheritance happens, so later inheritance
+        # never chains off a stop that was itself only inherited.
+        resolved_indices = {
+            jj for jj, stop in enumerate(day.stops)
+            if is_valid_geo_cord(stop.lat) and is_valid_geo_cord(stop.lng)
+        }
+
+        for jj, stop in enumerate(day.stops):
+            if jj in resolved_indices:
+                continue  # already has real coordinates, nothing to do
+
+            neighbor = _find_nearest_resolved_stop(day.stops, resolved_indices, jj)
+            if neighbor is not None:
+                stop.lat, stop.lng = neighbor.lat, neighbor.lng
+                logger.info(
+                    f"Stop '{stop.name}' on day {day.day_number} inherited coordinates "
+                    f"from '{neighbor.name}' (could not geocode independently)"
+                )
+            else:
                 errors.append(f"Could not verify location of '{stop.name}' on day {day.day_number}")
-                continue
-            stop.lat, stop.lng = result
 
-
-     # Day specific validations -- are the stops optimized from a distance to each other perspective
-    for  day in itinerary.days:
         logger.debug("Validating distances for day %d", day.day_number)
         for i in range(len(day.stops) - 1):
             stop1 = day.stops[i]
